@@ -6,7 +6,7 @@ winget install JanDeDobbeleer.OhMyPosh -s winget
 winget install fzf
 winget install sharkdp.fd
 winget install gerardog.gsudo
-BurntSushi.ripgrep.MSVC
+winget install BurntSushi.ripgrep.MSVC
 Install-Module -Name PSFzf
 
 if (-not(Test-Path -Path $PROFILE -PathType Leaf)){

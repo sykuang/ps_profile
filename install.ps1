@@ -1,13 +1,13 @@
-$SCRIPT_PATH = $MyInvocation.MyCommand.Path
-$SCRIPT_FOLDER = Split-Path $SCRIPT_PATH -Parent
+$SCRIPT_FOLDER = Join-Path $env:USERPROFILE -ChildPath ".ps_profile"
 
+git clone https://github.com/sykuang/ps_profile.git $SCRIPT_FOLDER
 Write-Output "Installing windows tools"
-winget install JanDeDobbeleer.OhMyPosh -s winget
-winget install fzf
-winget install sharkdp.fd
-winget install gerardog.gsudo
-winget install BurntSushi.ripgrep.MSVC
-winget install sharkdp.bat
+winget install -e --silent --accept-source-agreements --accept-package-agreements JanDeDobbeleer.OhMyPosh -s winget
+winget install -e --silent --accept-source-agreements --accept-package-agreements fzf
+winget install -e --silent --accept-source-agreements --accept-package-agreements sharkdp.fd
+winget install -e --silent --accept-source-agreements --accept-package-agreements gerardog.gsudo
+winget install -e --silent --accept-source-agreements --accept-package-agreements BurntSushi.ripgrep.MSVC
+winget install -e --silent --accept-source-agreements --accept-package-agreements sharkdp.bat
 Install-Module -Name PSFzf
 Install-Module -Name pins
 

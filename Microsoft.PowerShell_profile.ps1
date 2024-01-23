@@ -33,11 +33,15 @@ function rgcpp([string]$filename) {
 function launchDev([string]$arch) {
     $OldPWD = $PWD
     $version = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\" -Directory | Where-Object { $_.Name -like "20*" } | Sort-Object -Descending | Select-Object -First 1
+    if ($null -eq $version) {
+        Write-Output "No Visual Studio found"
+        return
+    }
     $distrubted = Get-ChildItem "$version" -Directory | Where-Object { $_.Name -like "Enterprise" } | Sort-Object -Descending | Select-Object -First 1
-    if ($distrubted -eq $null) {
+    if ($null -eq $distrubted) {
         $distrubted = Get-ChildItem "$version" -Directory | Where-Object { $_.Name -like "Professional" } | Sort-Object -Descending | Select-Object -First 1
     }
-    if ($distrubted -eq $null) {
+    if ($null -eq $distrubted) {
         $distrubted = Get-ChildItem "$version" -Directory | Where-Object { $_.Name -like "Community" } | Sort-Object -Descending | Select-Object -First 1
     }
     # Check if the path exists

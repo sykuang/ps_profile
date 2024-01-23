@@ -19,17 +19,53 @@ Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory
 Set-PSReadLineOption -PredictionSource History
 New-Alias .. "cd.."
 New-Alias vim "nvim"
-function cdc {set-location C:\}
-function cdd {set-location D:\}
-function cde {set-location E:\}
+function cdc { set-location C:\ }
+function cdd { set-location D:\ }
+function cde { set-location E:\ }
 function ... { set-location ..\.. }
 function cdsrc { set-location E:\src }
-function codeg([string]$filename){
+function codeg([string]$filename) {
     code --goto $filename
 }
-function rgcpp([string]$filename){
+function rgcpp([string]$filename) {
     rg --type cpp $filename
 }
-if(Test-Path $HOME\ps_env.ps1){
+function launchDev([string]$arch) {
+    $OldPWD = $PWD
+    $version = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\" -Directory | Where-Object { $_.Name -like "20*" } | Sort-Object -Descending | Select-Object -First 1
+    $distrubted = Get-ChildItem "$version" -Directory | Where-Object { $_.Name -like "Enterprise" } | Sort-Object -Descending | Select-Object -First 1
+    if ($distrubted -eq $null) {
+        $distrubted = Get-ChildItem "$version" -Directory | Where-Object { $_.Name -like "Professional" } | Sort-Object -Descending | Select-Object -First 1
+    }
+    if ($distrubted -eq $null) {
+        $distrubted = Get-ChildItem "$version" -Directory | Where-Object { $_.Name -like "Community" } | Sort-Object -Descending | Select-Object -First 1
+    }
+    # Check if the path exists
+    $shell_path = Join-Path -path $distrubted "Common7\Tools\Launch-VsDevShell.ps1"
+    $OSArchitecture = (Get-WmiObject -Class Win32_OperatingSystem | Select-Object    OSArchitecture -ErrorAction Stop).OSArchitecture
+    if ($OSArchitecture -eq "64-bit") {
+        $HostArch = "amd64"
+    }
+    elseif ($OSArchitecture -eq "32-bit") {
+        $HostArch = "x86"
+    }
+    elseif ($OSArchitecture -eq "ARM 64-bit Processor") {
+        $HostArch = "arm64"
+    }
+    if ($arch -eq $null -or $arch -eq "") {
+        $arch = $HostArch
+    }
+    Write-Output "Launch Target arch: $arch , HostArch : $HostArch"
+    if (Test-Path $shell_path) {
+        if ($HostArch -eq "arm64") {
+            & $shell_path -Arch $arch
+        }
+        else {
+            & $shell_path -Arch $arch -HostArch $HostArch
+        }
+    }
+    cd $OldPWD
+}
+if (Test-Path $HOME\ps_env.ps1) {
     . $HOME\ps_env.ps1
 }

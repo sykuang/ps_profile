@@ -8,7 +8,8 @@ function installPorfile {
   }
   catch [System.Management.Automation.CommandNotFoundException] {
     winget install -e --silent --accept-source-agreements --accept-package-agreements Git.Git
-    git clone https://github.com/sykuang/ps_profile.git $SCRIPT_FOLDER
+    Write-Output "Please restart the script with new windows terminal or powershell"
+    exit
   }
   if (-not(Test-Path -Path $PROFILE -PathType Leaf)) {
     New-Item -ItemType SymbolicLink -Path $PROFILE -Target $SCRIPT_FOLDER\Microsoft.PowerShell_profile.ps1

@@ -1,18 +1,48 @@
 $SCRIPT_FOLDER = Join-Path $env:USERPROFILE -ChildPath ".ps_profile"
 
-git clone https://github.com/sykuang/ps_profile.git $SCRIPT_FOLDER
-Write-Output "Installing windows tools"
-winget install -e --silent --accept-source-agreements --accept-package-agreements JanDeDobbeleer.OhMyPosh -s winget
-winget install -e --silent --accept-source-agreements --accept-package-agreements fzf
-winget install -e --silent --accept-source-agreements --accept-package-agreements sharkdp.fd
-winget install -e --silent --accept-source-agreements --accept-package-agreements gerardog.gsudo
-winget install -e --silent --accept-source-agreements --accept-package-agreements BurntSushi.ripgrep.MSVC
-winget install -e --silent --accept-source-agreements --accept-package-agreements sharkdp.bat
-Install-Module -Name PSFzf
-Install-Module -Name pins
-
-if (-not(Test-Path -Path $PROFILE -PathType Leaf)){
-  New-Item -ItemType SymbolicLink -Path $PROFILE -Target $SCRIPT_FOLDER\Microsoft.PowerShell_profile.ps1
+function installPorfile {
+  try {
+    if (-not(Test-Path -Path $SCRIPT_FOLDER -PathType Leaf)) {
+      git clone https://github.com/sykuang/ps_profile.git $SCRIPT_FOLDER
+    }
+  }
+  catch [System.Management.Automation.CommandNotFoundException] {
+    winget install -e --silent --accept-source-agreements --accept-package-agreements Git.Git
+    git clone https://github.com/sykuang/ps_profile.git $SCRIPT_FOLDER
+  }
+  if (-not(Test-Path -Path $PROFILE -PathType Leaf)) {
+    New-Item -ItemType SymbolicLink -Path $PROFILE -Target $SCRIPT_FOLDER\Microsoft.PowerShell_profile.ps1
+  }
+}
+function installModules {
+  Write-Output "Installing windows tools"
+  winget install -e --silent --accept-source-agreements --accept-package-agreements JanDeDobbeleer.OhMyPosh -s winget
+  winget install -e --silent --accept-source-agreements --accept-package-agreements fzf
+  winget install -e --silent --accept-source-agreements --accept-package-agreements sharkdp.fd
+  winget install -e --silent --accept-source-agreements --accept-package-agreements gerardog.gsudo
+  winget install -e --silent --accept-source-agreements --accept-package-agreements BurntSushi.ripgrep.MSVC
+  winget install -e --silent --accept-source-agreements --accept-package-agreements sharkdp.bat
+  Install-Module -AcceptLicense -Name PSFzf
+  Install-Module -AcceptLicense -Name pins
 }
 
+function installFiraCode {
+  # Download fonts
+  Invoke-WebRequest -Uri https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/FiraCode.zip -OutFile FiraCode.zip
+  # Install fonts
+  Expand-Archive -Path FiraCode.zip -DestinationPath FiraCode
+  $SourceDir = ".\FiraCode"
+  $Destination = (New-Object -ComObject Shell.Application).Namespace(0x14)
+
+  Get-ChildItem -Path $SourceDir -Include '*.ttf', '*.ttc', '*.otf' -Recurse | ForEach {
+    $Destination.CopyHere($_.FullName, 0x10)
+  }
+  Remove-Item -Recurse .\FiraCode
+  Remove-Item .\FiraCode.zip
+
+ 
+}
+installPorfile
+installModules
+installFiraCode
 Write-Output "Done"

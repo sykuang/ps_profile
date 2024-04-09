@@ -12,7 +12,7 @@ function installPorfile {
     exit
   }
   if (-not(Test-Path -Path $PROFILE -PathType Leaf)) {
-    New-Item -ItemType SymbolicLink -Path $PROFILE -Target $SCRIPT_FOLDER\Microsoft.PowerShell_profile.ps1
+    New-Item -Force -ItemType SymbolicLink -Path $PROFILE -Target $SCRIPT_FOLDER\Microsoft.PowerShell_profile.ps1
   }
 }
 function installModules {

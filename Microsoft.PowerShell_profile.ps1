@@ -18,14 +18,12 @@ Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory
 # Fish-like Autosuggestion in Powershell
 Set-PSReadLineOption -PredictionSource History
 New-Alias .. "cd.."
-New-Alias vim "nvim"
 function cdc { set-location C:\ }
 function cdd { set-location D:\ }
 function cde { set-location E:\ }
 function ... { set-location ..\.. }
-function cdsrc { set-location E:\src }
-function codeg([string]$filename) {
-    code --goto $filename
+function codeg([string]$filename, [int]$line) {
+    code --goto ${filename}:${line}
 }
 function rgcpp([string]$filename) {
     rg --type cpp $filename
@@ -53,7 +51,7 @@ function launchDev([string]$arch) {
     elseif ($OSArchitecture -eq "32-bit") {
         $HostArch = "x86"
     }
-    elseif ($OSArchitecture -eq "ARM 64-bit Processor") {
+    elseif ($OSArchitecture.contains("ARM")) {
         $HostArch = "arm64"
     }
     if ($arch -eq $null -or $arch -eq "") {
@@ -68,7 +66,38 @@ function launchDev([string]$arch) {
             & $shell_path -Arch $arch -HostArch $HostArch
         }
     }
-    cd $OldPWD
+    Set-Location $OldPWD
+}
+function upgradeProfile {
+   Set-Location $HOME\.ps_profile
+   git pull 
+}
+function scmd{
+    param(
+        [Parameter(Position=0,mandatory=$true)]
+        [string]$cmd,
+        [Parameter(
+            Mandatory=$false,
+            ValueFromRemainingArguments=$true,
+            Position = 1
+        )][string[]]
+        $listArgs
+    )
+    $scmd_path = Join-Path -path ${HOME} -ChildPath .scmd
+    if (!(Test-Path $scmd_path)){
+        git clone https://github.com/sykuang/scmd.git $scmd_path
+    }
+    $cmd_path = Join-Path -path $scmd_path -ChildPath "$cmd.ps1"
+    if (!(Test-Path $cmd_path)){
+        Write-Output "try upgrade scmd"
+        Set-Location $scmd_path
+        git pull
+    }
+    if (!(Test-Path $cmd_path)){
+        Write-Output "Command not found, please check"
+        return
+    }
+    . $cmd_path $listArgs
 }
 if (Test-Path $HOME\ps_env.ps1) {
     . $HOME\ps_env.ps1

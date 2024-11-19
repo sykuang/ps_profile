@@ -7,7 +7,7 @@ function enableDeveloper {
     Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock -Name AllowDevelopmentWithoutDevLicense -Value 1
   }
 }
-function installPorfile {
+function installProfile {
   try {
     if (-not(Test-Path -Path $SCRIPT_FOLDER -PathType Leaf)) {
       git clone https://github.com/sykuang/ps_profile.git $SCRIPT_FOLDER
@@ -30,8 +30,8 @@ function installModules {
   winget install -e --silent --accept-source-agreements --accept-package-agreements gerardog.gsudo
   winget install -e --silent --accept-source-agreements --accept-package-agreements BurntSushi.ripgrep.MSVC
   winget install -e --silent --accept-source-agreements --accept-package-agreements sharkdp.bat
-  Install-Module -AcceptLicense -Name PSFzf
-  Install-Module -AcceptLicense -Name pins
+  Install-Module -Force -AcceptLicense -Name PSFzf
+  Install-Module -Force -AcceptLicense -Name pins
 }
 
 function installFiraCode {
@@ -47,11 +47,9 @@ function installFiraCode {
   }
   Remove-Item -Recurse .\FiraCode
   Remove-Item .\FiraCode.zip
-
- 
 }
 enableDeveloper
-installPorfile
+installProfile
 installModules
 installFiraCode
 Write-Output "Done"

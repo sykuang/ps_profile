@@ -1,22 +1,40 @@
 oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\kushal.omp.json" | Invoke-Expression
 
 # Import module
-Import-Module PSReadLine
-Import-Module pins
+# Workaround for lazy loading modules in powershell
+# https://stackoverflow.com/questions/59341482/powershell-steps-to-fix-slow-startup
+$LazyLoadProfileRunspace = [RunspaceFactory]::CreateRunspace()
+$LazyLoadProfile = [PowerShell]::Create()
+$LazyLoadProfile.Runspace = $LazyLoadProfileRunspace
+$LazyLoadProfileRunspace.Open()
+[void]$LazyLoadProfile.AddScript({
+        Import-Module PSReadLine
+        Import-Module pins
+    }) # (1)
+[void]$LazyLoadProfile.BeginInvoke()
+$null = Register-ObjectEvent -InputObject $LazyLoadProfile -EventName InvocationStateChanged -Action {
+    Import-Module PSReadLine
+    Import-Module pins
+    # Shows navigable menu of all options when hitting Tab
+    Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
 
-# Shows navigable menu of all options when hitting Tab
-Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
+    # Autocompleteion for Arrow keys
+    Set-PSReadLineOption -HistorySearchCursorMovesToEnd
+    Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
+    Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
 
-# Autocompleteion for Arrow keys
-Set-PSReadLineOption -HistorySearchCursorMovesToEnd
-Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
-Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+    Set-PSReadLineOption -ShowToolTips
+    # Set FZF option
+    Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+    # Fish-like Autosuggestion in Powershell
+    Set-PSReadLineOption -PredictionSource History
 
-Set-PSReadLineOption -ShowToolTips
-# Set FZF option
-Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
-# Fish-like Autosuggestion in Powershell
-Set-PSReadLineOption -PredictionSource History
+    $global:GitPromptSettings.DefaultPromptPrefix.Text = 'PS '
+    $global:GitPromptSettings.DefaultPromptBeforeSuffix.Text = '`n'
+    $LazyLoadProfile.Dispose()
+    $LazyLoadProfileRunspace.Close()
+    $LazyLoadProfileRunspace.Dispose()
+}
 New-Alias .. "cd.."
 function cdc { set-location C:\ }
 function cdd { set-location D:\ }
@@ -69,31 +87,31 @@ function launchDev([string]$arch) {
     Set-Location $OldPWD
 }
 function upgradeProfile {
-   Set-Location $HOME\.ps_profile
-   git pull 
+    Set-Location $HOME\.ps_profile
+    git pull 
 }
-function scmd{
+function scmd {
     param(
-        [Parameter(Position=0,mandatory=$true)]
+        [Parameter(Position = 0, mandatory = $true)]
         [string]$cmd,
         [Parameter(
-            Mandatory=$false,
-            ValueFromRemainingArguments=$true,
+            Mandatory = $false,
+            ValueFromRemainingArguments = $true,
             Position = 1
         )][string[]]
         $listArgs
     )
     $scmd_path = Join-Path -path ${HOME} -ChildPath .scmd
-    if (!(Test-Path $scmd_path)){
+    if (!(Test-Path $scmd_path)) {
         git clone https://github.com/sykuang/scmd.git $scmd_path
     }
     $cmd_path = Join-Path -path $scmd_path -ChildPath "$cmd.ps1"
-    if (!(Test-Path $cmd_path)){
+    if (!(Test-Path $cmd_path)) {
         Write-Output "try upgrade scmd"
         Set-Location $scmd_path
         git pull
     }
-    if (!(Test-Path $cmd_path)){
+    if (!(Test-Path $cmd_path)) {
         Write-Output "Command not found, please check"
         return
     }

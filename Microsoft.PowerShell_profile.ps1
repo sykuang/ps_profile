@@ -1,39 +1,46 @@
-oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\kushal.omp.json" | Invoke-Expression
+# Oh-My-Posh: Use cached init script for faster startup
+$ohMyPoshCache = "$HOME\.oh-my-posh-init.ps1"
+if (Test-Path $ohMyPoshCache) {
+    . $ohMyPoshCache
+} else {
+    oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\kushal.omp.json" | Invoke-Expression
+}
 
-# Import module
-# Workaround for lazy loading modules in powershell
-# https://stackoverflow.com/questions/59341482/powershell-steps-to-fix-slow-startup
-$LazyLoadProfileRunspace = [RunspaceFactory]::CreateRunspace()
-$LazyLoadProfile = [PowerShell]::Create()
-$LazyLoadProfile.Runspace = $LazyLoadProfileRunspace
-$LazyLoadProfileRunspace.Open()
-[void]$LazyLoadProfile.AddScript({
-        Import-Module PSReadLine
-        Import-Module pins
-    }) # (1)
-[void]$LazyLoadProfile.BeginInvoke()
-$null = Register-ObjectEvent -InputObject $LazyLoadProfile -EventName InvocationStateChanged -Action {
+function Update-OhMyPoshCache {
+    oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\kushal.omp.json" --print > "$HOME\.oh-my-posh-init.ps1"
+    Write-Host "Oh-My-Posh cache updated. Restart shell to apply." -ForegroundColor Green
+}
+
+# PSReadLine and PSFzf: Lazy-load using ThreadJob and OnIdle event
+$null = Start-ThreadJob -Name 'ProfileInit' -ScriptBlock {
     Import-Module PSReadLine
-    Import-Module pins
+}
+
+$null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCount 1 -Action {
+    Import-Module PSReadLine
     # Shows navigable menu of all options when hitting Tab
     Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
 
-    # Autocompleteion for Arrow keys
+    # Autocompletion for Arrow keys
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
     Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
     Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
 
     Set-PSReadLineOption -ShowToolTips
-    # Set FZF option
-    Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
     # Fish-like Autosuggestion in Powershell
     Set-PSReadLineOption -PredictionSource History
 
-    $global:GitPromptSettings.DefaultPromptPrefix.Text = 'PS '
-    $global:GitPromptSettings.DefaultPromptBeforeSuffix.Text = '`n'
-    $LazyLoadProfile.Dispose()
-    $LazyLoadProfileRunspace.Close()
-    $LazyLoadProfileRunspace.Dispose()
+    # Lazy-load PSFzf: Import on first Ctrl+t or Ctrl+r
+    Set-PSReadLineKeyHandler -Chord 'Ctrl+t' -ScriptBlock {
+        Import-Module PSFzf -Global -ErrorAction SilentlyContinue
+        Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+        Invoke-FzfPsReadlineHandlerProvider
+    }
+    Set-PSReadLineKeyHandler -Chord 'Ctrl+r' -ScriptBlock {
+        Import-Module PSFzf -Global -ErrorAction SilentlyContinue
+        Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+        Invoke-FzfPsReadlineHandlerHistory
+    }
 }
 New-Alias .. "cd.."
 function cdc { set-location C:\ }
@@ -62,7 +69,7 @@ function launchDev([string]$arch) {
     }
     # Check if the path exists
     $shell_path = Join-Path -path $distrubted "Common7\Tools\Launch-VsDevShell.ps1"
-    $OSArchitecture = (Get-WmiObject -Class Win32_OperatingSystem | Select-Object    OSArchitecture -ErrorAction Stop).OSArchitecture
+    $OSArchitecture = (Get-CimInstance -ClassName Win32_OperatingSystem).OSArchitecture
     if ($OSArchitecture -eq "64-bit") {
         $HostArch = "amd64"
     }
@@ -72,7 +79,7 @@ function launchDev([string]$arch) {
     elseif ($OSArchitecture.contains("ARM")) {
         $HostArch = "arm64"
     }
-    if ($arch -eq $null -or $arch -eq "") {
+    if ($null -eq $arch -or $arch -eq "") {
         $arch = $HostArch
     }
     Write-Output "Launch Target arch: $arch , HostArch : $HostArch"
@@ -88,7 +95,8 @@ function launchDev([string]$arch) {
 }
 function upgradeProfile {
     Set-Location $HOME\.ps_profile
-    git pull 
+    git pull
+    Update-OhMyPoshCache
 }
 function scmd {
     param(
@@ -119,4 +127,27 @@ function scmd {
 }
 if (Test-Path $HOME\ps_env.ps1) {
     . $HOME\ps_env.ps1
+}
+
+# Lazy-load modules on CommandNotFound: pins and PowerToys WinGetCommandNotFound
+$global:__WinGetCmdNotFoundLoaded = $false
+$ExecutionContext.InvokeCommand.CommandNotFoundAction = {
+    param($commandName, $eventArgs)
+    
+    # Lazy-load pins module for Linux-like commands
+    $pinsCmds = @('which', 'cat', 'md5sum', 'open', 'time', 'wget')
+    if ($commandName -in $pinsCmds) {
+        Import-Module pins -Global -ErrorAction SilentlyContinue
+        $eventArgs.StopSearch = $false
+        return
+    }
+    
+    # Lazy-load PowerToys WinGetCommandNotFound on first unknown command
+    if (-not $global:__WinGetCmdNotFoundLoaded) {
+        $global:__WinGetCmdNotFoundLoaded = $true
+        $wingetModule = "C:\Program Files\PowerToys\WinUI3Apps\..\WinGetCommandNotFound.psd1"
+        if (Test-Path $wingetModule) {
+            Import-Module $wingetModule -Global -ErrorAction SilentlyContinue
+        }
+    }
 }

@@ -34,13 +34,17 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
     # Lazy-load PSFzf: Import on first Ctrl+t or Ctrl+r
     Set-PSReadLineKeyHandler -Chord 'Ctrl+t' -ScriptBlock {
         Import-Module PSFzf -Global -ErrorAction SilentlyContinue
-        Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
-        Invoke-FzfPsReadlineHandlerProvider
+        if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
+            Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+            Invoke-FzfPsReadlineHandlerProvider
+        }
     }
     Set-PSReadLineKeyHandler -Chord 'Ctrl+r' -ScriptBlock {
         Import-Module PSFzf -Global -ErrorAction SilentlyContinue
-        Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
-        Invoke-FzfPsReadlineHandlerHistory
+        if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
+            Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+            Invoke-FzfPsReadlineHandlerHistory
+        }
     }
 }
 New-Alias .. "cd.."

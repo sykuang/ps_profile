@@ -1,13 +1,14 @@
 # Oh-My-Posh: Use cached init script for faster startup
+$ohMyPoshTheme = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/kushal.omp.json"
 $ohMyPoshCache = "$HOME\.oh-my-posh-init.ps1"
 if (Test-Path $ohMyPoshCache) {
     . $ohMyPoshCache
 } else {
-    oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\kushal.omp.json" | Invoke-Expression
+    oh-my-posh init pwsh --config $ohMyPoshTheme | Invoke-Expression
 }
 
 function Update-OhMyPoshCache {
-    oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\kushal.omp.json" --print > "$HOME\.oh-my-posh-init.ps1"
+    oh-my-posh init pwsh --config $ohMyPoshTheme --print > "$HOME\.oh-my-posh-init.ps1"
     Write-Host "Oh-My-Posh cache updated. Restart shell to apply." -ForegroundColor Green
 }
 

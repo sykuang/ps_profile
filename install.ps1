@@ -1,4 +1,4 @@
-$SCRIPT_FOLDER = Join-Path $env:USERPROFILE -ChildPath ".ps_profile"
+$SCRIPT_FOLDER = Join-Path $env:USERPROFILE -ChildPath "PowerShell"
 function enableDeveloper {
   if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
     Start-Process -FilePath PowerShell.exe -Verb Runas -ArgumentList "Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock -Name AllowDevelopmentWithoutDevLicense -Value 1"
@@ -19,7 +19,8 @@ function installProfile {
     exit
   }
   if (-not(Test-Path -Path $PROFILE -PathType Leaf)) {
-    New-Item -Force -ItemType SymbolicLink -Path $PROFILE -Target $SCRIPT_FOLDER\Microsoft.PowerShell_profile.ps1
+    # Point Documents back to local path (not OneDrive)
+    Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "Personal" -Value "%USERPROFILE%\"
   }
 }
 function installModules {
@@ -40,10 +41,16 @@ function installFiraCode {
   # Install fonts
   Expand-Archive -Path FiraCode.zip -DestinationPath FiraCode
   $SourceDir = ".\FiraCode"
-  $Destination = (New-Object -ComObject Shell.Application).Namespace(0x14)
-
-  Get-ChildItem -Path $SourceDir -Include '*.ttf', '*.ttc', '*.otf' -Recurse | ForEach {
-    $Destination.CopyHere($_.FullName, 0x10)
+  $FontsFolder = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"
+  if (-not (Test-Path $FontsFolder)) { New-Item -ItemType Directory -Path $FontsFolder -Force | Out-Null }
+  
+  Get-ChildItem -Path $SourceDir -Include '*.ttf', '*.ttc', '*.otf' -Recurse | ForEach-Object {
+    $fontPath = Join-Path $FontsFolder $_.Name
+    Copy-Item -Path $_.FullName -Destination $fontPath -Force
+    # Register font in user registry
+    $regPath = "HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
+    $fontName = $_.BaseName
+    New-ItemProperty -Path $regPath -Name $fontName -Value $fontPath -PropertyType String -Force | Out-Null
   }
   Remove-Item -Recurse .\FiraCode
   Remove-Item .\FiraCode.zip

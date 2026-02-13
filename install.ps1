@@ -1,15 +1,6 @@
-param(
-  [switch]$SkipProfileCheck
-)
+param()
 $SCRIPT_FOLDER = Join-Path $env:USERPROFILE -ChildPath "PowerShell"
-function enableDeveloper {
-  if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
-    Start-Process -FilePath PowerShell.exe -Verb Runas -ArgumentList "Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock -Name AllowDevelopmentWithoutDevLicense -Value 1"
-  }
-  else {
-    Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock -Name AllowDevelopmentWithoutDevLicense -Value 1
-  }
-}
+
 function installProfile {
   try {
     if (-not(Test-Path -Path $SCRIPT_FOLDER -PathType Container)) {
@@ -18,16 +9,14 @@ function installProfile {
   }
   catch [System.Management.Automation.CommandNotFoundException] {
     winget install -e --silent --accept-source-agreements --accept-package-agreements Git.Git
-    Write-Output "Git installed. Restarting script to continue setup..."
-    Start-Process pwsh -ArgumentList "-File", $PSCommandPath
-    exit
+    Write-Output "Git installed. Refreshing PATH..."
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+    git clone https://github.com/sykuang/ps_profile.git $SCRIPT_FOLDER
   }
-  if (-not $SkipProfileCheck -and -not(Test-Path -Path $PROFILE -PathType Leaf)) {
-    # Point Documents back to local path (not OneDrive)
+  if (-not(Test-Path -Path $PROFILE -PathType Leaf)) {
+    # Point Documents back to local path (not OneDrive) so $PROFILE resolves to the cloned repo
     Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "Personal" -Value "%USERPROFILE%\"
-    Write-Output "Profile path has been modified. Restarting in a new PowerShell session..."
-    Start-Process pwsh -ArgumentList "-File", $PSCommandPath, "-SkipProfileCheck"
-    exit
+    Write-Output "Profile path has been configured."
   }
 }
 function installModules {
@@ -38,8 +27,8 @@ function installModules {
   winget install -e --silent --accept-source-agreements --accept-package-agreements gerardog.gsudo
   winget install -e --silent --accept-source-agreements --accept-package-agreements BurntSushi.ripgrep.MSVC
   winget install -e --silent --accept-source-agreements --accept-package-agreements sharkdp.bat
-  Install-Module -Force -AcceptLicense -Scope CurrentUser -Name PSFzf
-  Install-Module -Force -AcceptLicense -Scope CurrentUser -Name pins
+  # Install PS modules in a new pwsh process so the modified profile path is active
+  Start-Process -FilePath pwsh -ArgumentList "-NoProfile", "-Command", "Install-Module -Force -AcceptLicense -Scope CurrentUser -Name PSFzf; Install-Module -Force -AcceptLicense -Scope CurrentUser -Name pins" -Wait
 }
 
 function installFiraCode {
@@ -70,7 +59,6 @@ function installFiraCode {
     if (Test-Path $tempDir) { Remove-Item -Recurse -Force $tempDir }
   }
 }
-enableDeveloper
 installProfile
 installModules
 installFiraCode

@@ -60,20 +60,26 @@ function rgcpp([string]$filename) {
 }
 function launchDev([string]$arch) {
     $OldPWD = $PWD
-    $version = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\" -Directory | Where-Object { $_.Name -like "20*" } | Sort-Object -Descending | Select-Object -First 1
-    if ($null -eq $version) {
-        Write-Output "No Visual Studio found"
+    # Use vswhere.exe to find the latest Visual Studio installation
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (!(Test-Path $vswhere)) {
+        Write-Output "vswhere.exe not found. Is Visual Studio installed?"
         return
     }
-    $distrubted = Get-ChildItem "$version" -Directory | Where-Object { $_.Name -like "Enterprise" } | Sort-Object -Descending | Select-Object -First 1
-    if ($null -eq $distrubted) {
-        $distrubted = Get-ChildItem "$version" -Directory | Where-Object { $_.Name -like "Professional" } | Sort-Object -Descending | Select-Object -First 1
+    $installPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    if ([string]::IsNullOrEmpty($installPath)) {
+        # Fallback: find any VS installation without requiring VC tools
+        $installPath = & $vswhere -latest -products * -property installationPath
     }
-    if ($null -eq $distrubted) {
-        $distrubted = Get-ChildItem "$version" -Directory | Where-Object { $_.Name -like "Community" } | Sort-Object -Descending | Select-Object -First 1
+    if ([string]::IsNullOrEmpty($installPath)) {
+        Write-Output "No Visual Studio installation found"
+        return
     }
-    # Check if the path exists
-    $shell_path = Join-Path -path $distrubted "Common7\Tools\Launch-VsDevShell.ps1"
+    $shell_path = Join-Path -Path $installPath "Common7\Tools\Launch-VsDevShell.ps1"
+    if (!(Test-Path $shell_path)) {
+        Write-Output "Launch-VsDevShell.ps1 not found at: $shell_path"
+        return
+    }
     $OSArchitecture = (Get-CimInstance -ClassName Win32_OperatingSystem).OSArchitecture
     if ($OSArchitecture -eq "64-bit") {
         $HostArch = "amd64"
@@ -88,13 +94,11 @@ function launchDev([string]$arch) {
         $arch = $HostArch
     }
     Write-Output "Launch Target arch: $arch , HostArch : $HostArch"
-    if (Test-Path $shell_path) {
-        if ($HostArch -eq "arm64") {
-            & $shell_path -Arch $arch
-        }
-        else {
-            & $shell_path -Arch $arch -HostArch $HostArch
-        }
+    if ($HostArch -eq "arm64") {
+        & $shell_path -Arch $arch
+    }
+    else {
+        & $shell_path -Arch $arch -HostArch $HostArch
     }
     Set-Location $OldPWD
 }
@@ -156,3 +160,8 @@ $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
         }
     }
 }
+
+#f45873b3-b655-43a6-b217-97c00aa0db58 PowerToys CommandNotFound module
+
+Import-Module -Name Microsoft.WinGet.CommandNotFound
+#f45873b3-b655-43a6-b217-97c00aa0db58

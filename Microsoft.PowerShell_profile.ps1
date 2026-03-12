@@ -47,6 +47,40 @@ $null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCoun
         }
     }
 }
+# Autoenv: auto-activate/deactivate .venv when entering/leaving directories
+$global:AutoEnvPreviousVenv = $null
+function _AutoEnvCheck {
+    $activateScript = Join-Path $PWD ".venv\Scripts\activate.ps1"
+    $currentVenv = Join-Path $PWD ".venv"
+    if (Test-Path $activateScript) {
+        if ($env:VIRTUAL_ENV -ne $currentVenv) {
+            $global:AutoEnvPreviousVenv = $env:VIRTUAL_ENV
+            . $activateScript
+        }
+    } elseif ($env:VIRTUAL_ENV) {
+        deactivate
+        if ($global:AutoEnvPreviousVenv -and (Test-Path "$global:AutoEnvPreviousVenv\Scripts\activate.ps1")) {
+            . "$global:AutoEnvPreviousVenv\Scripts\activate.ps1"
+            $global:AutoEnvPreviousVenv = $null
+        }
+    }
+}
+function Set-LocationWithAutoEnv {
+    param(
+        [Parameter(Position = 0, ValueFromPipeline = $true, ValueFromRemainingArguments = $true)]
+        [string]$Path
+    )
+    if ($Path) {
+        Microsoft.PowerShell.Management\Set-Location $Path
+    } else {
+        Microsoft.PowerShell.Management\Set-Location $HOME
+    }
+    _AutoEnvCheck
+}
+Set-Alias -Name cd -Value Set-LocationWithAutoEnv -Option AllScope -Force
+# Run on profile load for terminals that open directly in a project folder
+_AutoEnvCheck
+
 New-Alias .. "cd.."
 function cdc { set-location C:\ }
 function cdd { set-location D:\ }

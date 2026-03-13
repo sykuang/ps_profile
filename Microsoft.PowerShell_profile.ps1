@@ -172,6 +172,12 @@ if (Test-Path $HOME\ps_env.ps1) {
     . $HOME\ps_env.ps1
 }
 
+#f45873b3-b655-43a6-b217-97c00aa0db58 PowerToys CommandNotFound module
+if (Get-Module -ListAvailable -Name Microsoft.WinGet.CommandNotFound -ErrorAction SilentlyContinue) {
+    Import-Module -Name Microsoft.WinGet.CommandNotFound
+}
+#f45873b3-b655-43a6-b217-97c00aa0db58
+
 # Lazy-load modules on CommandNotFound: pins and PowerToys WinGetCommandNotFound
 $global:__WinGetCmdNotFoundLoaded = $false
 $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
@@ -194,9 +200,3 @@ $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
         }
     }
 }
-
-#f45873b3-b655-43a6-b217-97c00aa0db58 PowerToys CommandNotFound module
-if (Get-Module -ListAvailable -Name Microsoft.WinGet.CommandNotFound -ErrorAction SilentlyContinue) {
-    Import-Module -Name Microsoft.WinGet.CommandNotFound
-}
-#f45873b3-b655-43a6-b217-97c00aa0db58

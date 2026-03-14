@@ -3,7 +3,8 @@ param()
 # Check for admin and self-elevate if needed
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Output "Requesting administrator privileges..."
-    Start-Process -FilePath pwsh -Verb RunAs -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath
+    Start-Process -FilePath pwsh -Verb RunAs -Wait -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath
+    Write-Output "Elevated process finished."
     exit
 }
 

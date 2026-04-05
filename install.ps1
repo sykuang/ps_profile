@@ -29,10 +29,14 @@ function installProfile {
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
     git clone https://github.com/sykuang/ps_profile.git $SCRIPT_FOLDER
   }
-  if (-not(Test-Path -Path $PROFILE -PathType Leaf)) {
-    # Point Documents back to local path (not OneDrive) so $PROFILE resolves to the cloned repo
-    Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "Personal" -Value "%USERPROFILE%\"
-    Write-Output "Profile path has been configured."
+  # Ensure $PROFILE dot-sources the cloned profile when paths differ (e.g. OneDrive Documents)
+  $expectedProfile = Join-Path $SCRIPT_FOLDER "Microsoft.PowerShell_profile.ps1"
+  if ($PROFILE -ne $expectedProfile) {
+    $dotSource = ". `"$expectedProfile`""
+    $profileDir = Split-Path $PROFILE -Parent
+    if (-not (Test-Path $profileDir)) { New-Item -ItemType Directory -Path $profileDir -Force | Out-Null }
+    Set-Content -Path $PROFILE -Value $dotSource -Encoding UTF8
+    Write-Output "Profile configured to load from $expectedProfile"
   }
 }
 function installModules {

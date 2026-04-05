@@ -137,7 +137,7 @@ function launchDev([string]$arch) {
     Set-Location $OldPWD
 }
 function upgradeProfile {
-    Set-Location $HOME\.ps_profile
+    Set-Location $HOME\PowerShell
     git pull
     Update-OhMyPoshCache
 }

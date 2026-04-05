@@ -3,9 +3,16 @@ param()
 # Check for admin and self-elevate if needed
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Output "Requesting administrator privileges..."
-    Start-Process -FilePath pwsh -Verb RunAs -Wait -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath
+    # When run via iwr | iex, $PSCommandPath is empty. Download to a temp file to re-execute elevated.
+    if (-not $PSCommandPath) {
+        $tempScript = Join-Path $env:TEMP "ps_profile_install.ps1"
+        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/sykuang/ps_profile/main/install.ps1" -OutFile $tempScript
+        Start-Process -FilePath pwsh -Verb RunAs -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $tempScript
+    } else {
+        Start-Process -FilePath pwsh -Verb RunAs -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $PSCommandPath
+    }
     Write-Output "Elevated process finished."
-    exit
+    return
 }
 
 $SCRIPT_FOLDER = Join-Path $env:USERPROFILE -ChildPath "PowerShell"

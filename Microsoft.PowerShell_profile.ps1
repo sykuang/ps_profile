@@ -82,13 +82,14 @@ Set-Alias -Name cd -Value Set-LocationWithAutoEnv -Option AllScope -Force
 _AutoEnvCheck
 
 New-Alias .. "cd.."
+function cpt { copilot --yolo @args }
+function gst { git status }
+function gd { git diff }
+New-Alias vim "nvim"
 function cdc { set-location C:\ }
 function cdd { set-location D:\ }
 function cde { set-location E:\ }
 function ... { set-location ..\.. }
-function codeg([string]$filename, [int]$line) {
-    code --goto ${filename}:${line}
-}
 function rgcpp([string]$filename) {
     rg --type cpp $filename
 }
@@ -182,7 +183,7 @@ if (Get-Module -ListAvailable -Name Microsoft.WinGet.CommandNotFound -ErrorActio
 $global:__WinGetCmdNotFoundLoaded = $false
 $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
     param($commandName, $eventArgs)
-    
+
     # Lazy-load pins module for Linux-like commands
     $pinsCmds = @('which', 'cat', 'md5sum', 'open', 'time', 'wget')
     if ($commandName -in $pinsCmds) {
@@ -190,7 +191,7 @@ $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
         $eventArgs.StopSearch = $false
         return
     }
-    
+
     # Lazy-load PowerToys WinGetCommandNotFound on first unknown command
     if (-not $global:__WinGetCmdNotFoundLoaded) {
         $global:__WinGetCmdNotFoundLoaded = $true

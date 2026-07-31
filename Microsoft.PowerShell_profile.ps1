@@ -1,50 +1,29 @@
-# Oh-My-Posh: Use cached init script for faster startup
-$ohMyPoshTheme = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/kushal.omp.json"
-$ohMyPoshCache = "$HOME\.oh-my-posh-init.ps1"
-if (Test-Path $ohMyPoshCache) {
-    . $ohMyPoshCache
-} else {
-    oh-my-posh init pwsh --config $ohMyPoshTheme | Invoke-Expression
-}
+# Starship prompt
+$env:STARSHIP_CONFIG = Join-Path $PSScriptRoot 'starship.toml'
+Invoke-Expression (& 'C:\Program Files\starship\bin\starship.exe' init powershell)
 
-function Update-OhMyPoshCache {
-    oh-my-posh init pwsh --config $ohMyPoshTheme --print > "$HOME\.oh-my-posh-init.ps1"
-    Write-Host "Oh-My-Posh cache updated. Restart shell to apply." -ForegroundColor Green
-}
-
-# PSReadLine and PSFzf: Lazy-load using ThreadJob and OnIdle event
-$null = Start-ThreadJob -Name 'ProfileInit' -ScriptBlock {
-    Import-Module PSReadLine
-}
-
-$null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCount 1 -Action {
-    Import-Module PSReadLine
-    # Shows navigable menu of all options when hitting Tab
-    Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
-
-    # Autocompletion for Arrow keys
-    Set-PSReadLineOption -HistorySearchCursorMovesToEnd
-    Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
-    Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
-
-    Set-PSReadLineOption -ShowToolTips
-    # Fish-like Autosuggestion in Powershell
+# Configure the line editor synchronously.
+Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
+Set-PSReadLineOption -HistorySearchCursorMovesToEnd -ShowToolTips
+if ($Host.UI.SupportsVirtualTerminal -and -not [Console]::IsOutputRedirected) {
     Set-PSReadLineOption -PredictionSource History
+}
+Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
+Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
 
-    # Lazy-load PSFzf: Import on first Ctrl+t or Ctrl+r
-    Set-PSReadLineKeyHandler -Chord 'Ctrl+t' -ScriptBlock {
-        Import-Module PSFzf -Global -ErrorAction SilentlyContinue
-        if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
-            Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
-            Invoke-FzfPsReadlineHandlerProvider
-        }
+# Lazy-load PSFzf on first use.
+Set-PSReadLineKeyHandler -Chord 'Ctrl+t' -ScriptBlock {
+    Import-Module PSFzf -Global -ErrorAction SilentlyContinue
+    if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
+        Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+        Invoke-FzfPsReadlineHandlerProvider
     }
-    Set-PSReadLineKeyHandler -Chord 'Ctrl+r' -ScriptBlock {
-        Import-Module PSFzf -Global -ErrorAction SilentlyContinue
-        if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
-            Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
-            Invoke-FzfPsReadlineHandlerHistory
-        }
+}
+Set-PSReadLineKeyHandler -Chord 'Ctrl+r' -ScriptBlock {
+    Import-Module PSFzf -Global -ErrorAction SilentlyContinue
+    if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
+        Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+        Invoke-FzfPsReadlineHandlerHistory
     }
 }
 # Autoenv: auto-activate/deactivate .venv when entering/leaving directories
@@ -140,7 +119,6 @@ function launchDev([string]$arch) {
 function upgradeProfile {
     Set-Location $HOME\PowerShell
     git pull
-    Update-OhMyPoshCache
 }
 function scmd {
     param(
@@ -172,12 +150,6 @@ function scmd {
 if (Test-Path $HOME\ps_env.ps1) {
     . $HOME\ps_env.ps1
 }
-
-#f45873b3-b655-43a6-b217-97c00aa0db58 PowerToys CommandNotFound module
-if (Get-Module -ListAvailable -Name Microsoft.WinGet.CommandNotFound -ErrorAction SilentlyContinue) {
-    Import-Module -Name Microsoft.WinGet.CommandNotFound
-}
-#f45873b3-b655-43a6-b217-97c00aa0db58
 
 # Lazy-load modules on CommandNotFound: pins and PowerToys WinGetCommandNotFound
 $global:__WinGetCmdNotFoundLoaded = $false

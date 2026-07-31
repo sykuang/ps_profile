@@ -41,7 +41,7 @@ function installProfile {
 }
 function installModules {
   Write-Output "Installing windows tools"
-  winget install -e --silent --accept-source-agreements --accept-package-agreements JanDeDobbeleer.OhMyPosh -s winget
+  winget install -e --silent --accept-source-agreements --accept-package-agreements Starship.Starship -s winget
   winget install -e --silent --accept-source-agreements --accept-package-agreements junegunn.fzf
   winget install -e --silent --accept-source-agreements --accept-package-agreements sharkdp.fd
   winget install -e --silent --accept-source-agreements --accept-package-agreements gerardog.gsudo

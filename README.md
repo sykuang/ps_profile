@@ -2,6 +2,8 @@
 
 This is my personal profile for Windows development. It contains various configurations and settings to enhance my development workflow.
 
+The profile uses Starship with the repository's `starship.toml` configuration.
+
 ## Table of Contents
 
 - [Installation](#installation)

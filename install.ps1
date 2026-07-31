@@ -31,7 +31,9 @@ function installProfile {
   }
   # Ensure $PROFILE dot-sources the cloned profile when paths differ (e.g. OneDrive Documents)
   $expectedProfile = Join-Path $SCRIPT_FOLDER "Microsoft.PowerShell_profile.ps1"
-  if ($PROFILE -ne $expectedProfile) {
+  $resolvedProfile = [System.IO.Path]::GetFullPath($PROFILE)
+  $resolvedExpectedProfile = [System.IO.Path]::GetFullPath($expectedProfile)
+  if ($resolvedProfile -ne $resolvedExpectedProfile) {
     $dotSource = ". `"$expectedProfile`""
     $profileDir = Split-Path $PROFILE -Parent
     if (-not (Test-Path $profileDir)) { New-Item -ItemType Directory -Path $profileDir -Force | Out-Null }
